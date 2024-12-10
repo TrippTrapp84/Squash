@@ -1062,8 +1062,15 @@ function Squash.CatalogueSearchParams(): SerDes<CatalogSearchParams>
 	return catalogueSearchParamsCache
 end
 
-local function cframeLookupEntries()
-	return {
+local idToCFrame
+local cframeCache = {}
+local function cframe(positionSerDes: SerDes<number>): SerDes<CFrame>
+	if cframeCache[positionSerDes] then
+		return cframeCache[positionSerDes]
+	end
+
+	--? Not defined outside so pure Luau users don't suffer errors
+	idToCFrame = idToCFrame or {
 		CFrame.Angles(0, 0, 0),
 		CFrame.Angles(math.rad(90), 0, 0),
 		CFrame.Angles(0, math.rad(180), math.rad(180)),
@@ -1089,37 +1096,12 @@ local function cframeLookupEntries()
 		CFrame.Angles(0, math.rad(90), 0),
 		CFrame.Angles(math.rad(-90), math.rad(90), 0),
 	}
-end
-
-local function cframeSpecialCaseLookup()
-	local lookup = {}
-
-	local entries = cframeLookupEntries()
-
-	for i,v in pairs(entries) do
-		lookup[Vector3.new(v:ToOrientation())] = i
-	end
-
-	return lookup
-end
-
-local idToCFrame
-local cframeToId
-local cframeCache = {}
-local function cframe(positionSerDes: SerDes<number>): SerDes<CFrame>
-	if cframeCache[positionSerDes] then
-		return cframeCache[positionSerDes]
-	end
-
-	--? Not defined outside so pure Luau users don't suffer errors
-	cframeToId = cframeToId or cframeSpecialCaseLookup()
-	idToCFrame = idToCFrame or cframeLookupEntries()
 
 	local push, pop = positionSerDes.ser, positionSerDes.des
 
 	local cframeserdes: SerDes<CFrame> = {
 		ser = function(cursor, cframe)
-			local specialId = cframeToId[Vector3.new(cframe:ToOrientation())]
+			local specialId = table.find(idToCFrame, cframe.Rotation)
 			if specialId then
 				pushu1(cursor, specialId)
 			else
